@@ -1,0 +1,173 @@
+---
+sidebar_position: 1
+title: "Chapter 1: VLA Architecture"
+description: Understanding Vision-Language-Action models for robotics
+---
+
+# VLA Architecture
+
+**Learning Objectives:**
+- Understand how VLA models unify vision, language, and robot actions
+- Trace the evolution from separate vision/language/policy models to unified VLAs
+- Understand the architecture of key VLA models (RT-2, Octo, OpenVLA)
+- Grasp the role of tokenization in mapping between modalities
+
+**Prerequisites:** [Module 3: AI-Robot Brain](/module-3/chapter-1), basic understanding of transformers
+
+**Estimated Reading Time:** 50 minutes
+
+---
+
+## The Convergence
+
+Traditional robot AI uses **separate models** for each capability:
+
+```
+Camera Image → [Vision Model] → Object Detections
+Text Command → [Language Model] → Parsed Intent
+(Detections + Intent) → [Policy Model] → Robot Actions
+```
+
+**Vision-Language-Action (VLA)** models collapse this pipeline into a **single model**:
+
+```
+Camera Image + Text Command → [VLA Model] → Robot Actions
+```
+
+This is significant because:
+
+1. **End-to-end learning**: no hand-designed interfaces between modules
+2. **Language grounding**: the model understands what "pick up the red cup" means visually
+3. **Generalization**: one model handles many tasks via language instructions
+
+## Key VLA Models
+
+### RT-2 (Robotics Transformer 2)
+
+Google's RT-2 fine-tunes a **vision-language model** (PaLM-E or PaLI-X) to output robot actions:
+
+| Component | Details |
+|-----------|---------|
+| Base model | PaLM-E (562B) or PaLI-X (55B) |
+| Input | Camera image + text instruction |
+| Output | Robot actions as text tokens |
+| Training data | 130K robot demonstrations + web-scale VL data |
+
+The key insight: **actions are tokenized as text**. A robot action like "move arm to (0.3, 0.5, 0.2)" becomes the text string `"1 128 256 128"` (discretized action bins).
+
+```python
+# Conceptual RT-2 inference
+image = robot.get_camera_image()
+instruction = "pick up the green block"
+
+# The VLA model outputs action tokens as text
+action_tokens = rt2_model.generate(
+    image=image,
+    text=instruction,
+    max_tokens=7,  # 7 DoF action
+)
+
+# Decode tokens back to continuous actions
+action = detokenize_action(action_tokens)
+robot.execute(action)
+```
+
+### Octo
+
+A **generalist robot policy** from UC Berkeley:
+
+- Trained on **800K robot trajectories** from the Open X-Embodiment dataset
+- Supports multiple robot embodiments (arms, mobile robots)
+- Uses a **transformer architecture** with action chunking
+
+```python
+from octo.model import OctoModel
+
+model = OctoModel.load_pretrained("hf://rail-berkeley/octo-base")
+
+# Predict actions for a new task
+task = model.create_tasks(texts=["pick up the cup"])
+actions = model.sample_actions(
+    observations={"image_primary": camera_image},
+    tasks=task,
+    rng=jax.random.PRNGKey(0),
+)
+```
+
+### OpenVLA
+
+An **open-source VLA** built on Llama 2:
+
+- 7B parameters
+- Fine-tuned on 970K robot episodes
+- Fully open-source (weights, code, data)
+
+## How VLA Models Work
+
+### 1. Visual Tokenization
+
+Images are converted to tokens using a **vision encoder** (ViT):
+
+```
+Image (224×224×3) → ViT → [v1, v2, ..., v256] (256 visual tokens)
+```
+
+### 2. Language Tokenization
+
+Text instructions are tokenized using the LLM's tokenizer:
+
+```
+"pick up the red cup" → [t1, t2, t3, t4, t5] (5 text tokens)
+```
+
+### 3. Action Tokenization
+
+Robot actions are discretized into bins:
+
+```python
+# Discretize continuous action into 256 bins
+def tokenize_action(action, num_bins=256):
+    """Convert continuous action [-1, 1] to token index."""
+    normalized = (action + 1) / 2  # [0, 1]
+    bin_index = int(normalized * (num_bins - 1))
+    return bin_index
+
+# 7-DoF action becomes 7 tokens
+action = [0.1, -0.3, 0.5, 0.0, 0.2, -0.1, 0.8]
+tokens = [tokenize_action(a) for a in action]
+# → [140, 89, 191, 128, 153, 115, 230]
+```
+
+### 4. Unified Transformer
+
+All tokens are fed into a single transformer:
+
+```
+Input:  [v1...v256, t1...t5, a1...a7_prev]
+Output: [a1...a7_next]  (next action prediction)
+```
+
+## The Training Pipeline
+
+```
+1. Collect demonstrations: human teleoperation → (image, instruction, action) triples
+2. Pre-train: large-scale vision-language data (internet images + text)
+3. Fine-tune: robot demonstration data
+4. Deploy: real-time inference on robot
+```
+
+## Exercise: Explore VLA Tokenization
+
+1. Load the OpenVLA tokenizer
+2. Tokenize a sample image, instruction, and action sequence
+3. Count the total tokens and compute the sequence length
+4. Discuss: what happens as image resolution increases?
+
+## Summary
+
+- **VLA models** unify vision, language, and action into a single transformer
+- Actions are **tokenized as discrete bins**, enabling text-like generation
+- Key models: **RT-2** (Google), **Octo** (Berkeley), **OpenVLA** (open-source)
+- VLAs enable **language-conditioned robot control**: "pick up the red cup"
+
+**Next:** [Chapter 2: VLA Training & Deployment](/module-4/chapter-2) — fine-tune and deploy VLAs.

@@ -1,0 +1,241 @@
+---
+sidebar_position: 2
+title: "Chapter 2: VLA Training & Deployment"
+description: Fine-tuning and deploying Vision-Language-Action models
+---
+
+# VLA Training & Deployment
+
+**Learning Objectives:**
+- Prepare robot demonstration datasets for VLA training
+- Fine-tune a pre-trained VLA on custom robot tasks
+- Optimize VLA models for real-time robot inference
+- Deploy VLA models on physical robot hardware
+
+**Prerequisites:** [Chapter 1: VLA Architecture](/module-4/chapter-1)
+
+**Estimated Reading Time:** 50 minutes
+
+---
+
+## Training Data: Robot Demonstrations
+
+VLA models learn from **demonstrations** — recordings of a human or expert policy performing tasks:
+
+### Data Collection Methods
+
+| Method | Pros | Cons |
+|--------|------|------|
+| Teleoperation | High quality, natural | Slow, requires hardware |
+| Kinesthetic teaching | Intuitive for manipulation | Limited to accessible workspace |
+| VR teleoperation | Immersive, precise | Requires VR setup |
+| Scripted policies | Scalable, reproducible | Limited task diversity |
+
+### Dataset Format
+
+Each demonstration contains:
+
+```python
+# A single demonstration trajectory
+trajectory = {
+    "observations": {
+        "image": np.array([...]),          # (T, H, W, 3)
+        "joint_positions": np.array([...]), # (T, 7)
+        "gripper_state": np.array([...]),   # (T, 1)
+    },
+    "actions": np.array([...]),            # (T, 7) — joint deltas
+    "language_instruction": "pick up the red block and place it on the blue block",
+    "metadata": {
+        "robot": "franka_panda",
+        "success": True,
+        "episode_length": 150,
+    }
+}
+```
+
+### The Open X-Embodiment Dataset
+
+The **Open X-Embodiment (OXE)** dataset is the largest robot demonstration dataset:
+
+- **2.2 million episodes** from 22 robot embodiments
+- **527 skills** across manipulation, navigation, and locomotion
+- Standardized **RLDS format** (TensorFlow Datasets)
+
+```python
+import tensorflow_datasets as tfds
+
+# Load a subset of OXE
+dataset = tfds.load(
+    'fractal20220817_data',  # Google's robot data
+    split='train[:1000]',
+)
+
+for episode in dataset:
+    images = episode['steps']['observation']['image']
+    actions = episode['steps']['action']
+    instruction = episode['language_instruction']
+```
+
+## Fine-Tuning a VLA
+
+### Using OpenVLA
+
+```python
+from transformers import AutoModelForVision2Seq, AutoProcessor
+
+# Load pre-trained OpenVLA
+model = AutoModelForVision2Seq.from_pretrained(
+    "openvla/openvla-7b",
+    torch_dtype=torch.bfloat16,
+)
+processor = AutoProcessor.from_pretrained("openvla/openvla-7b")
+
+# Prepare training data
+def preprocess(example):
+    image = example["image"]
+    instruction = example["language_instruction"]
+    action = example["action"]
+
+    inputs = processor(
+        images=image,
+        text=f"In: What action should the robot take to {instruction}?\nOut:",
+    )
+    inputs["labels"] = tokenize_action(action)
+    return inputs
+
+# Fine-tune with LoRA for efficiency
+from peft import LoraConfig, get_peft_model
+
+lora_config = LoraConfig(
+    r=32,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],
+    lora_dropout=0.05,
+)
+
+model = get_peft_model(model, lora_config)
+```
+
+### Training Configuration
+
+```python
+from transformers import TrainingArguments, Trainer
+
+training_args = TrainingArguments(
+    output_dir="./vla-finetuned",
+    num_train_epochs=50,
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=4,
+    learning_rate=2e-5,
+    warmup_steps=100,
+    bf16=True,
+    logging_steps=10,
+    save_steps=500,
+    dataloader_num_workers=4,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
+)
+
+trainer.train()
+```
+
+## Optimizing for Real-Time Inference
+
+VLA models are large. For real-time robot control (10-20 Hz), optimization is critical:
+
+### Quantization
+
+```python
+# Quantize to 4-bit for faster inference
+from transformers import BitsAndBytesConfig
+
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_quant_type="nf4",
+)
+
+model = AutoModelForVision2Seq.from_pretrained(
+    "openvla/openvla-7b",
+    quantization_config=quantization_config,
+)
+```
+
+### Action Chunking
+
+Instead of predicting one action at a time, predict **chunks of N actions**:
+
+```python
+# Predict 10 future actions at once
+action_chunk = model.predict(image, instruction, chunk_size=10)
+
+# Execute actions at 10 Hz
+for action in action_chunk:
+    robot.execute(action)
+    time.sleep(0.1)
+
+# Only call the model every 10 steps → 1 Hz inference
+```
+
+### Inference Benchmarks
+
+| Method | Model Size | Latency | Control Rate |
+|--------|-----------|---------|-------------|
+| FP32 | 7B | 500ms | 2 Hz |
+| BF16 | 7B | 250ms | 4 Hz |
+| INT4 | 7B | 80ms | 12 Hz |
+| INT4 + chunk=10 | 7B | 80ms/chunk | 10 Hz effective |
+
+## Deployment Architecture
+
+```
+Robot Hardware
+├── Camera → USB/Ethernet → Robot Computer
+├── Robot Computer (GPU)
+│   ├── ROS 2 node: image subscriber
+│   ├── VLA inference service (PyTorch)
+│   └── ROS 2 node: action publisher
+└── Robot Controller → Joint commands
+```
+
+```python
+# ROS 2 VLA deployment node
+class VLAControllerNode(Node):
+    def __init__(self):
+        super().__init__('vla_controller')
+        self.model = load_vla_model("./vla-finetuned")
+        self.image_sub = self.create_subscription(
+            Image, '/camera/image_raw', self.image_callback, 10
+        )
+        self.action_pub = self.create_publisher(
+            JointTrajectory, '/joint_trajectory', 10
+        )
+        self.instruction = "pick up the object"
+
+    def image_callback(self, msg):
+        image = bridge.imgmsg_to_cv2(msg)
+        action = self.model.predict(image, self.instruction)
+        self.publish_action(action)
+```
+
+## Exercise: Fine-Tune OpenVLA
+
+1. Download 100 demonstrations from the OXE dataset (fractal subset)
+2. Fine-tune OpenVLA with LoRA for 50 epochs
+3. Quantize the model to INT4
+4. Measure inference latency and report achievable control rate
+5. Run inference on 10 held-out test images and evaluate action accuracy
+
+## Summary
+
+- VLA training requires **demonstration data** with (image, instruction, action) triples
+- **Fine-tuning with LoRA** is efficient — adapts a 7B model with minimal compute
+- **Quantization + action chunking** enables real-time robot control
+- Deployment integrates with ROS 2 for camera input and joint command output
+
+**Congratulations!** You've completed the Physical AI & Humanoid Robotics textbook. You now have the skills to build, simulate, train, and deploy intelligent robots.

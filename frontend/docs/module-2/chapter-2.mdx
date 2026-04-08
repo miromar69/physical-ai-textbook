@@ -1,0 +1,145 @@
+---
+sidebar_position: 2
+title: "Chapter 2: Unity Digital Twin"
+description: Building photorealistic robot simulations with Unity and ML-Agents
+---
+
+# Unity Digital Twin
+
+**Learning Objectives:**
+- Set up Unity for robot simulation with the Robotics Hub package
+- Create photorealistic environments for visual AI training
+- Use Unity ML-Agents for reinforcement learning in simulation
+- Connect Unity simulations to ROS 2
+
+**Prerequisites:** [Chapter 1: Gazebo Simulation](/module-2/chapter-1)
+
+**Estimated Reading Time:** 40 minutes
+
+---
+
+## Why Unity?
+
+While Gazebo excels at physics simulation, **Unity** brings:
+
+- **Photorealistic rendering**: critical for training vision models
+- **Domain randomization**: vary lighting, textures, and objects to improve generalization
+- **ML-Agents**: built-in reinforcement learning toolkit
+- **Cross-platform**: Windows, macOS, Linux
+
+A **digital twin** is a virtual replica of a physical robot and its environment. Unity lets you create digital twins that look and behave like the real world.
+
+## Setting Up Unity for Robotics
+
+### Install Unity Hub and Editor
+
+```bash
+# Download Unity Hub from unity.com
+# Install Unity 2022.3 LTS via the Hub
+```
+
+### Install Required Packages
+
+In Unity Package Manager, add:
+
+- **Unity Robotics Hub** — ROS 2 integration
+- **ML-Agents** — reinforcement learning
+- **Universal Render Pipeline (URP)** — better visuals
+
+### ROS 2 Connection
+
+Unity communicates with ROS 2 via the **ROS-TCP-Connector**:
+
+```csharp
+using Unity.Robotics.ROSTCPConnector;
+
+public class RobotController : MonoBehaviour
+{
+    ROSConnection ros;
+
+    void Start()
+    {
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<TwistMsg>("/cmd_vel");
+    }
+
+    void PublishVelocity(float linear, float angular)
+    {
+        var msg = new TwistMsg
+        {
+            linear = new Vector3Msg(linear, 0, 0),
+            angular = new Vector3Msg(0, 0, angular)
+        };
+        ros.Publish("/cmd_vel", msg);
+    }
+}
+```
+
+## Domain Randomization
+
+To make vision models robust, randomize the simulation:
+
+```csharp
+public class DomainRandomizer : MonoBehaviour
+{
+    public Light directionalLight;
+    public Material[] floorMaterials;
+    public GameObject[] distractorPrefabs;
+
+    public void Randomize()
+    {
+        // Randomize lighting
+        directionalLight.intensity = Random.Range(0.5f, 2.0f);
+        directionalLight.color = Random.ColorHSV(0f, 1f, 0.5f, 1f, 0.8f, 1f);
+
+        // Randomize floor texture
+        var renderer = GetComponent<Renderer>();
+        renderer.material = floorMaterials[Random.Range(0, floorMaterials.Length)];
+
+        // Spawn random distractors
+        for (int i = 0; i < Random.Range(3, 10); i++)
+        {
+            var prefab = distractorPrefabs[Random.Range(0, distractorPrefabs.Length)];
+            Instantiate(prefab, RandomPosition(), Random.rotation);
+        }
+    }
+}
+```
+
+## ML-Agents for Robot Training
+
+Unity ML-Agents provides a Python API for training RL agents:
+
+```python
+# Python training script (using ML-Agents)
+from mlagents_envs.environment import UnityEnvironment
+
+env = UnityEnvironment(file_name="RobotSim")
+env.reset()
+
+behavior_name = list(env.behavior_specs)[0]
+spec = env.behavior_specs[behavior_name]
+
+# Training loop
+for episode in range(1000):
+    decision_steps, terminal_steps = env.get_steps(behavior_name)
+    action = spec.action_spec.random_action(len(decision_steps))
+    env.set_actions(behavior_name, action)
+    env.step()
+```
+
+## Exercise: Create a Pick-and-Place Digital Twin
+
+1. Create a Unity scene with a table, a robot arm (URDF import), and 5 colored cubes
+2. Add domain randomization for lighting and cube positions
+3. Connect to ROS 2 and publish joint states
+4. Capture camera images and verify they appear as ROS 2 topics
+
+## Summary
+
+- **Unity** enables photorealistic robot simulation for visual AI
+- **Domain randomization** improves sim-to-real transfer for vision models
+- **ML-Agents** provides built-in RL training within Unity
+- **ROS-TCP-Connector** bridges Unity and ROS 2
+
+**Next:** [Chapter 3: Sim-to-Real Transfer](/module-2/chapter-3) — bridge the reality gap.

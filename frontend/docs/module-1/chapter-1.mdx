@@ -1,0 +1,167 @@
+---
+sidebar_position: 1
+title: "Chapter 1: ROS 2 Foundations"
+description: Introduction to ROS 2 architecture, nodes, topics, publishers, and subscribers
+---
+
+# ROS 2 Foundations
+
+**Learning Objectives:**
+- Understand the ROS 2 architecture and why it replaced ROS 1
+- Create and run ROS 2 nodes
+- Implement publisher-subscriber communication using topics
+- Use ROS 2 CLI tools for debugging and introspection
+
+**Prerequisites:** Basic Python, Linux command line familiarity
+
+**Estimated Reading Time:** 45 minutes
+
+---
+
+## What Is ROS 2?
+
+The **Robot Operating System 2 (ROS 2)** is not an operating system — it's a middleware framework that provides the communication infrastructure for robot software. Think of it as the **nervous system** of a robot: it carries messages between different parts of the robot's software, just as nerves carry signals between the brain and body.
+
+ROS 2 was built from the ground up to address the limitations of ROS 1:
+
+| Feature | ROS 1 | ROS 2 |
+|---------|-------|-------|
+| Communication | Custom TCP/UDP | DDS (Data Distribution Service) |
+| Real-time | Not supported | Supported via DDS QoS |
+| Multi-robot | Difficult | Native support |
+| Security | None | DDS Security |
+| Platform | Linux only | Linux, macOS, Windows |
+
+## Core Concepts
+
+### Nodes
+
+A **node** is the fundamental unit of computation in ROS 2. Each node is a process that performs a specific task — reading a sensor, processing data, controlling a motor, etc.
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class MinimalNode(Node):
+    def __init__(self):
+        super().__init__('minimal_node')
+        self.get_logger().info('Hello from ROS 2!')
+
+def main():
+    rclpy.init()
+    node = MinimalNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+Run this node:
+
+```bash
+python3 minimal_node.py
+```
+
+### Topics
+
+**Topics** are named channels for message passing. Nodes communicate by publishing messages to topics and subscribing to topics. This is the **publish-subscribe** pattern.
+
+```python
+from std_msgs.msg import String
+
+class PublisherNode(Node):
+    def __init__(self):
+        super().__init__('publisher_node')
+        self.publisher = self.create_publisher(String, 'greetings', 10)
+        self.timer = self.create_timer(1.0, self.timer_callback)
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = 'Hello, Robot World!'
+        self.publisher.publish(msg)
+        self.get_logger().info(f'Published: {msg.data}')
+```
+
+```python
+class SubscriberNode(Node):
+    def __init__(self):
+        super().__init__('subscriber_node')
+        self.subscription = self.create_subscription(
+            String, 'greetings', self.listener_callback, 10
+        )
+
+    def listener_callback(self, msg):
+        self.get_logger().info(f'Received: {msg.data}')
+```
+
+### Message Types
+
+ROS 2 uses **typed messages** for communication. Common built-in types:
+
+| Package | Message | Use Case |
+|---------|---------|----------|
+| `std_msgs` | `String`, `Int32`, `Float64` | Simple data |
+| `geometry_msgs` | `Twist`, `Pose`, `Point` | Motion and position |
+| `sensor_msgs` | `Image`, `LaserScan`, `Imu` | Sensor data |
+| `nav_msgs` | `Odometry`, `Path`, `OccupancyGrid` | Navigation |
+
+## ROS 2 CLI Tools
+
+The `ros2` CLI is your debugging companion:
+
+```bash
+# List running nodes
+ros2 node list
+
+# List active topics
+ros2 topic list
+
+# Echo messages on a topic
+ros2 topic echo /greetings
+
+# Check topic type and frequency
+ros2 topic info /greetings
+ros2 topic hz /greetings
+```
+
+## Exercise: Build a Temperature Monitor
+
+Create a ROS 2 system with two nodes:
+
+1. **Sensor Node**: Publishes simulated temperature readings (20–30°C) to `/temperature` every second
+2. **Monitor Node**: Subscribes to `/temperature` and logs a warning when temperature exceeds 25°C
+
+```python
+# sensor_node.py
+import random
+from sensor_msgs.msg import Temperature
+
+class SensorNode(Node):
+    def __init__(self):
+        super().__init__('sensor_node')
+        self.publisher = self.create_publisher(Temperature, 'temperature', 10)
+        self.timer = self.create_timer(1.0, self.publish_temp)
+
+    def publish_temp(self):
+        msg = Temperature()
+        msg.temperature = random.uniform(20.0, 30.0)
+        self.publisher.publish(msg)
+```
+
+:::tip Try It
+Modify the monitor node to also track the rolling average of the last 10 readings. What ROS 2 feature could you use to store this state?
+:::
+
+## Summary
+
+In this chapter you learned:
+
+- ROS 2 is a middleware framework providing communication infrastructure for robots
+- **Nodes** are independent processes that perform specific tasks
+- **Topics** enable publish-subscribe messaging between nodes
+- The ROS 2 CLI provides powerful debugging tools
+- Message types are strictly typed and standardized
+
+**Next:** [Chapter 2: Advanced ROS 2](/module-1/chapter-2) covers services, actions, and the Nav2 navigation stack.

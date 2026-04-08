@@ -1,0 +1,176 @@
+---
+sidebar_position: 1
+title: "Chapter 1: Isaac Sim Fundamentals"
+description: Getting started with NVIDIA Isaac Sim for robot training
+---
+
+# Isaac Sim Fundamentals
+
+**Learning Objectives:**
+- Install and configure NVIDIA Isaac Sim
+- Create training environments with Isaac Gym
+- Define reward functions for robot tasks
+- Run parallel training across thousands of environments
+
+**Prerequisites:** [Module 2: Digital Twin](/module-2/chapter-1), NVIDIA GPU with CUDA
+
+**Estimated Reading Time:** 45 minutes
+
+---
+
+## What Is NVIDIA Isaac?
+
+**NVIDIA Isaac** is a platform for developing and training AI-powered robots. It includes:
+
+| Component | Purpose |
+|-----------|---------|
+| **Isaac Sim** | High-fidelity physics simulator built on Omniverse |
+| **Isaac Gym** | GPU-accelerated parallel RL training |
+| **Isaac Lab** | Framework for RL tasks and environments |
+| **Isaac ROS** | GPU-accelerated ROS 2 packages |
+
+The key advantage: **massive parallelism**. Isaac Gym can simulate thousands of robots simultaneously on a single GPU, enabling training that would take weeks in Gazebo to complete in hours.
+
+## Setting Up Isaac Sim
+
+### System Requirements
+
+- NVIDIA RTX GPU (3070 or better recommended)
+- CUDA 12.0+
+- Ubuntu 22.04
+
+### Installation
+
+```bash
+# Install via pip (Isaac Lab)
+pip install isaaclab
+
+# Or pull the Docker container
+docker pull nvcr.io/nvidia/isaac-sim:4.0.0
+```
+
+### Verify Installation
+
+```python
+import isaaclab
+from isaaclab.envs import ManagerBasedRLEnv
+
+print(f"Isaac Lab version: {isaaclab.__version__}")
+```
+
+## Creating Training Environments
+
+Isaac Lab uses a **task-based** architecture. Each task defines:
+
+1. **Scene**: robots, objects, terrain
+2. **Observations**: what the agent sees
+3. **Actions**: what the agent can do
+4. **Rewards**: what the agent is optimizing for
+
+```python
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.assets import ArticulationCfg
+
+class ReachEnvCfg(ManagerBasedRLEnvCfg):
+    """Configuration for a robot reaching task."""
+
+    # Scene
+    scene = InteractiveSceneCfg(
+        num_envs=4096,  # 4096 parallel environments!
+        env_spacing=2.0,
+    )
+
+    # Robot
+    robot = ArticulationCfg(
+        prim_path="/World/Robot",
+        spawn=sim_utils.UsdFileCfg(
+            usd_path="franka_panda.usd"
+        ),
+    )
+
+    # Simulation
+    sim = SimulationCfg(dt=0.01, render_interval=2)
+```
+
+## Reward Functions
+
+The reward function defines **what success looks like**. For a reaching task:
+
+```python
+def compute_reward(env):
+    """Reward for reaching a target position."""
+    # Distance between end-effector and target
+    distance = torch.norm(
+        env.end_effector_pos - env.target_pos, dim=-1
+    )
+
+    # Dense reward: closer = higher reward
+    distance_reward = 1.0 / (1.0 + distance)
+
+    # Sparse reward: bonus for reaching the target
+    reached = (distance < 0.02).float()
+    reach_bonus = reached * 10.0
+
+    # Penalty for excessive joint velocities
+    velocity_penalty = -0.01 * torch.sum(
+        env.joint_velocities ** 2, dim=-1
+    )
+
+    return distance_reward + reach_bonus + velocity_penalty
+```
+
+### Reward Design Tips
+
+| Principle | Why | Example |
+|-----------|-----|---------|
+| Dense over sparse | Faster learning | Distance-based, not just success/fail |
+| Shape the reward | Guide exploration | Intermediate goals before final target |
+| Penalize bad behavior | Safety | Joint limits, excessive force |
+| Normalize rewards | Stable training | Keep rewards in [-1, 1] range |
+
+## Parallel Training
+
+Isaac Gym's GPU parallelism:
+
+```python
+# Train 4096 robots simultaneously
+from isaaclab.envs import ManagerBasedRLEnv
+
+env = ManagerBasedRLEnv(cfg=ReachEnvCfg())
+obs = env.reset()
+
+for step in range(10000):
+    # All 4096 environments step in parallel
+    actions = policy(obs)  # batched inference
+    obs, rewards, dones, infos = env.step(actions)
+```
+
+**Performance comparison:**
+
+| Simulator | Environments | Steps/second |
+|-----------|-------------|-------------|
+| Gazebo | 1 | ~1,000 |
+| Isaac Gym | 4,096 | ~200,000 |
+| Isaac Gym | 16,384 | ~500,000 |
+
+## Exercise: Train a Reaching Policy
+
+1. Set up an Isaac Lab environment with a Franka Panda arm
+2. Define a reward function for reaching a random target point
+3. Train for 1,000 iterations using PPO
+4. Visualize the trained policy
+
+```bash
+# Run training
+python -m isaaclab.train --task reach --num_envs 4096 --max_iterations 1000
+```
+
+## Summary
+
+- **NVIDIA Isaac** provides GPU-accelerated robot simulation and training
+- **Isaac Gym** enables thousands of parallel environments on a single GPU
+- **Reward functions** define the learning objective — design them carefully
+- Parallel training offers 100-500x speedup over traditional simulators
+
+**Next:** [Chapter 2: Isaac for Manipulation](/module-3/chapter-2) — train grasping and manipulation policies.

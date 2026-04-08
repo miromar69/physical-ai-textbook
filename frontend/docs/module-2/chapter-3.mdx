@@ -1,0 +1,140 @@
+---
+sidebar_position: 3
+title: "Chapter 3: Sim-to-Real Transfer"
+description: Bridging the gap between simulation and physical robot deployment
+---
+
+# Sim-to-Real Transfer
+
+**Learning Objectives:**
+- Understand the sim-to-real gap and its causes
+- Apply domain randomization techniques to improve transfer
+- Use system identification to calibrate simulation parameters
+- Deploy simulation-trained policies on physical hardware
+
+**Prerequisites:** [Chapter 1: Gazebo](/module-2/chapter-1), [Chapter 2: Unity](/module-2/chapter-2)
+
+**Estimated Reading Time:** 40 minutes
+
+---
+
+## The Reality Gap
+
+A policy trained purely in simulation often fails on a real robot. This **sim-to-real gap** arises from:
+
+| Source | Simulation | Reality |
+|--------|-----------|---------|
+| Physics | Idealized contacts, joints | Friction, backlash, deformation |
+| Sensors | Clean data, perfect timing | Noise, latency, calibration drift |
+| Visuals | Synthetic textures | Complex lighting, reflections |
+| Dynamics | Perfect motors | Voltage sag, thermal effects |
+
+## Domain Randomization
+
+**Randomize simulation parameters** during training so the policy learns to handle variation:
+
+```python
+# Randomize physics parameters in Gazebo via SDF
+randomizations = {
+    'friction': (0.5, 1.5),     # range of friction coefficients
+    'mass_scale': (0.8, 1.2),   # ±20% mass variation
+    'sensor_noise': (0.0, 0.05), # up to 5% sensor noise
+    'latency_ms': (0, 20),      # up to 20ms added latency
+}
+
+for param, (low, high) in randomizations.items():
+    value = random.uniform(low, high)
+    apply_randomization(param, value)
+```
+
+Key parameters to randomize:
+
+- **Visual**: lighting intensity/color, textures, camera position/FOV
+- **Physics**: friction, mass, damping, joint limits
+- **Sensor**: noise magnitude, bias, delay
+- **Actuator**: motor strength, response time
+
+## System Identification
+
+Instead of (or in addition to) randomization, **measure real-world parameters** and calibrate the simulator:
+
+```python
+# System ID: measure real motor response
+# Apply step input, record position over time
+import numpy as np
+
+# Real data (from robot)
+real_positions = np.load('real_motor_response.npy')
+
+# Simulated data (from Gazebo)
+sim_positions = run_simulation(damping=0.1, friction=0.5)
+
+# Optimize simulation parameters to match reality
+from scipy.optimize import minimize
+
+def error(params):
+    damping, friction = params
+    sim = run_simulation(damping=damping, friction=friction)
+    return np.mean((sim - real_positions) ** 2)
+
+result = minimize(error, x0=[0.1, 0.5])
+optimal_damping, optimal_friction = result.x
+```
+
+## Transfer Strategies
+
+### 1. Direct Transfer
+Train in sim → Deploy directly on real robot. Works when the sim is accurate.
+
+### 2. Fine-Tuning
+Train in sim → Fine-tune with small amount of real-world data.
+
+### 3. Progressive Transfer
+```
+Low-fidelity sim → High-fidelity sim → Real world
+   (fast training)    (refined policy)    (final adaptation)
+```
+
+### 4. Sim-to-Real with Adaptation Networks
+
+```python
+# Domain adaptation: align sim and real feature distributions
+class DomainAdapter(nn.Module):
+    def __init__(self, feature_dim):
+        super().__init__()
+        self.feature_extractor = nn.Sequential(
+            nn.Linear(feature_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+        )
+        self.domain_classifier = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),  # sim=0, real=1
+        )
+
+    def forward(self, x):
+        features = self.feature_extractor(x)
+        domain = self.domain_classifier(features)
+        return features, domain
+```
+
+## Exercise: Sim-to-Real Navigation
+
+1. Train a navigation policy in Gazebo using domain randomization
+2. Measure the real robot's wheel friction and motor response
+3. Calibrate Gazebo parameters using system identification
+4. Compare direct transfer vs calibrated transfer performance
+
+:::info No Physical Robot?
+You can simulate the "real world" by creating a second Gazebo environment with different parameters than the training environment. Compare transfer performance between the two.
+:::
+
+## Summary
+
+- The **sim-to-real gap** is caused by differences in physics, sensors, visuals, and dynamics
+- **Domain randomization** makes policies robust to variation
+- **System identification** calibrates simulation to match reality
+- Combine strategies for the best transfer results
+
+**Next:** [Module 3: The AI-Robot Brain](/module-3/chapter-1) — train intelligent behavior with NVIDIA Isaac.

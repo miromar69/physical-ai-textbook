@@ -1,55 +1,141 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+  Sync Impact Report
+  ==================
+  Version change: 0.0.0 → 1.0.0 (MAJOR: initial ratification)
+  Modified principles: N/A (initial creation)
+  Added sections:
+    - Core Principles (6): Content Accuracy, Interactive-First,
+      Modular Architecture, Test-First Development,
+      Security & Privacy, Accessibility & Inclusivity
+    - Technology Standards
+    - Development Workflow
+    - Governance
+  Removed sections: None
+  Templates requiring updates:
+    - .specify/templates/plan-template.md ✅ compatible (Constitution Check placeholder)
+    - .specify/templates/spec-template.md ✅ compatible (no constitution refs)
+    - .specify/templates/tasks-template.md ✅ compatible (no constitution refs)
+  Follow-up TODOs: None
+-->
+
+# Physical AI & Humanoid Robotics Textbook Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Content Accuracy & Pedagogical Rigor
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All textbook content MUST be technically accurate, peer-reviewable,
+and cited where applicable. Every chapter MUST include learning
+objectives, prerequisite knowledge, and measurable outcomes.
+Content MUST be structured for progressive difficulty across
+mixed audiences (university students, industry professionals,
+and self-learners). No claims without supporting references
+or derivations.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Interactive-First Learning
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Every concept MUST be accompanied by at least one interactive
+element: simulation, runnable code example, embedded visualization,
+or assessment. Static explanations alone are insufficient.
+Interactive simulations MUST degrade gracefully when WebGL or
+JavaScript is unavailable, providing fallback static diagrams.
+Code examples MUST be copy-pasteable and runnable with documented
+dependencies.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Modular Architecture
 
-### [PRINCIPLE_6_NAME]
+The system is composed of clearly separated concerns:
+- **Content layer**: Docusaurus + MDX (React/TypeScript) for
+  rendering and authoring all textbook content.
+- **Backend layer**: FastAPI (Python) for the RAG chatbot,
+  search, and API services.
+- **Data layer**: Neon Serverless Postgres for relational data,
+  Qdrant Cloud for vector search and embeddings.
+- **Auth layer**: Better Auth for authentication and access control.
+- **AI layer**: OpenAI Agents SDK for conversational tutoring.
 
+Each layer MUST be independently deployable and testable.
+Cross-layer contracts MUST be defined via typed API schemas.
+No layer may directly access another layer's database or
+internal state.
 
-[PRINCIPLE__DESCRIPTION]
+### IV. Test-First Development
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+All application code (backend services, frontend components,
+API endpoints) MUST follow TDD: write failing tests first,
+then implement. Content (MDX) is exempt from TDD but MUST
+pass linting and link-checking. Integration tests MUST cover:
+API contract boundaries, authentication flows, vector search
+accuracy, and chatbot response quality. Red-Green-Refactor
+cycle is enforced for all non-content code.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### V. Security & Privacy
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Secrets and tokens MUST never be hardcoded; use environment
+variables and `.env` files (excluded from version control).
+All user data MUST be encrypted at rest and in transit.
+Better Auth MUST enforce secure session management.
+RAG chatbot MUST NOT leak private user data in responses.
+OWASP Top 10 vulnerabilities MUST be addressed in every
+code review. Dependency audits MUST run in CI.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### VI. Accessibility & Inclusivity
+
+All content MUST meet WCAG 2.1 AA standards. Interactive
+simulations MUST provide keyboard navigation and screen
+reader descriptions. Content MUST support multiple reading
+levels through progressive disclosure (introductory summaries
+before deep dives). All images and diagrams MUST include
+alt text. Color MUST NOT be the sole means of conveying
+information in visualizations.
+
+## Technology Standards
+
+- **Frontend**: Docusaurus 3.x, React 18+, TypeScript 5+, MDX 3
+- **Backend**: Python 3.11+, FastAPI, Pydantic for validation
+- **Database**: Neon Serverless Postgres (relational),
+  Qdrant Cloud (vector search)
+- **Auth**: Better Auth
+- **AI/ML**: OpenAI Agents SDK for RAG chatbot
+- **Testing**: Vitest (frontend), pytest (backend),
+  Playwright (E2E)
+- **CI/CD**: GitHub Actions
+- **Linting**: ESLint + Prettier (frontend),
+  Ruff (backend Python)
+
+## Development Workflow
+
+1. **Specify**: Define feature requirements in `specs/<feature>/spec.md`
+   with acceptance criteria and user stories.
+2. **Plan**: Produce architecture and implementation plan in
+   `specs/<feature>/plan.md` with constitution compliance check.
+3. **Task**: Break plan into dependency-ordered tasks in
+   `specs/<feature>/tasks.md`.
+4. **Implement**: Follow task order. Write tests first for
+   application code. Commit after each logical task.
+5. **Review**: All PRs MUST pass CI (lint, test, build).
+   Content PRs MUST be reviewed for technical accuracy.
+6. **Record**: Create PHR for every significant interaction.
+   Surface ADR suggestions for architectural decisions.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution is the authoritative source of project
+principles and standards. All code, content, and architectural
+decisions MUST comply with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- **Amendments**: Any change to this constitution MUST be
+  documented with rationale, approved by the project lead,
+  and accompanied by a migration plan for affected artifacts.
+- **Versioning**: Constitution follows semantic versioning
+  (MAJOR.MINOR.PATCH). MAJOR for principle removals/redefinitions,
+  MINOR for new principles or material expansions,
+  PATCH for clarifications and typo fixes.
+- **Compliance**: Every PR and code review MUST verify
+  alignment with these principles. Violations MUST be
+  resolved before merge.
+- **Complexity Justification**: Any deviation from the
+  simplicity principle (e.g., adding new services, layers,
+  or dependencies) MUST be justified in writing.
+
+**Version**: 1.0.0 | **Ratified**: 2026-04-04 | **Last Amended**: 2026-04-04

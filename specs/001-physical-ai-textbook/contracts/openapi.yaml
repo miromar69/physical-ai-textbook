@@ -1,0 +1,458 @@
+openapi: 3.1.0
+info:
+  title: Physical AI Textbook API
+  version: 1.0.0
+  description: |
+    Backend API for the Physical AI & Humanoid Robotics Textbook.
+    Provides authentication, RAG chatbot, content personalization,
+    and Urdu translation services.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api.example.com
+    description: Production
+
+paths:
+  # ──────────────────────────────────────────────
+  # Authentication (Better Auth)
+  # ──────────────────────────────────────────────
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [Auth]
+      summary: Register a new user with background profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error (invalid email, weak password)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/signin:
+    post:
+      operationId: signin
+      tags: [Auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SigninRequest"
+      responses:
+        "200":
+          description: Signed in successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/signout:
+    post:
+      operationId: signout
+      tags: [Auth]
+      summary: Sign out current user
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Signed out successfully
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Auth]
+      summary: Get current authenticated user
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ──────────────────────────────────────────────
+  # Profile
+  # ──────────────────────────────────────────────
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [Profile]
+      summary: Get current user's background profile
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Background profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackgroundProfile"
+        "401":
+          description: Not authenticated
+    put:
+      operationId: updateProfile
+      tags: [Profile]
+      summary: Update background profile
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BackgroundProfileUpdate"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackgroundProfile"
+
+  # ──────────────────────────────────────────────
+  # RAG Chatbot
+  # ──────────────────────────────────────────────
+
+  /chat/message:
+    post:
+      operationId: sendChatMessage
+      tags: [Chat]
+      summary: Send a message to the RAG chatbot
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Chatbot response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "401":
+          description: Not authenticated
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ──────────────────────────────────────────────
+  # Personalization
+  # ──────────────────────────────────────────────
+
+  /personalize:
+    post:
+      operationId: personalizeChapter
+      tags: [Personalize]
+      summary: Get personalized chapter content
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonalizeRequest"
+      responses:
+        "200":
+          description: Personalized chapter content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalizeResponse"
+        "401":
+          description: Not authenticated
+
+  # ──────────────────────────────────────────────
+  # Translation
+  # ──────────────────────────────────────────────
+
+  /translate:
+    post:
+      operationId: translateChapter
+      tags: [Translate]
+      summary: Translate chapter content to Urdu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateRequest"
+      responses:
+        "200":
+          description: Translated chapter content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslateResponse"
+
+  # ──────────────────────────────────────────────
+  # Health
+  # ──────────────────────────────────────────────
+
+  /health:
+    get:
+      operationId: healthCheck
+      tags: [System]
+      summary: Health check endpoint
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session_token
+
+  schemas:
+    # ── Auth ──
+
+    SignupRequest:
+      type: object
+      required: [email, password, display_name, profile]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        display_name:
+          type: string
+          maxLength: 100
+        profile:
+          $ref: "#/components/schemas/BackgroundProfileUpdate"
+
+    SigninRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserResponse"
+        message:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+
+    # ── Profile ──
+
+    SkillLevel:
+      type: string
+      enum: [beginner, intermediate, advanced]
+
+    BackgroundProfile:
+      type: object
+      properties:
+        python_level:
+          $ref: "#/components/schemas/SkillLevel"
+        ros_level:
+          $ref: "#/components/schemas/SkillLevel"
+        ml_ai_level:
+          $ref: "#/components/schemas/SkillLevel"
+        simulation_level:
+          $ref: "#/components/schemas/SkillLevel"
+        has_gpu:
+          type: boolean
+        has_robot_kit:
+          type: boolean
+        has_sensors:
+          type: boolean
+
+    BackgroundProfileUpdate:
+      type: object
+      required:
+        - python_level
+        - ros_level
+        - ml_ai_level
+        - simulation_level
+        - has_gpu
+        - has_robot_kit
+        - has_sensors
+      properties:
+        python_level:
+          $ref: "#/components/schemas/SkillLevel"
+        ros_level:
+          $ref: "#/components/schemas/SkillLevel"
+        ml_ai_level:
+          $ref: "#/components/schemas/SkillLevel"
+        simulation_level:
+          $ref: "#/components/schemas/SkillLevel"
+        has_gpu:
+          type: boolean
+        has_robot_kit:
+          type: boolean
+        has_sensors:
+          type: boolean
+
+    # ── Chat ──
+
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+        conversation_id:
+          type: string
+          format: uuid
+          description: Existing conversation ID; omit to start new
+        chapter_slug:
+          type: string
+          description: Current chapter context (e.g. "module-1/chapter-1")
+        selected_text:
+          type: string
+          maxLength: 5000
+          description: Text selected on the page for contextual Q&A
+
+    ChatResponse:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+          description: Assistant response text
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              chapter_slug:
+                type: string
+              heading:
+                type: string
+              snippet:
+                type: string
+
+    # ── Personalize ──
+
+    PersonalizeRequest:
+      type: object
+      required: [chapter_slug, content]
+      properties:
+        chapter_slug:
+          type: string
+        content:
+          type: string
+          description: Original chapter content in Markdown
+
+    PersonalizeResponse:
+      type: object
+      properties:
+        chapter_slug:
+          type: string
+        personalized_content:
+          type: string
+          description: Adapted chapter content in Markdown
+        cached:
+          type: boolean
+          description: Whether the result was served from cache
+
+    # ── Translate ──
+
+    TranslateRequest:
+      type: object
+      required: [chapter_slug, content]
+      properties:
+        chapter_slug:
+          type: string
+        content:
+          type: string
+          description: Original chapter prose content in Markdown
+
+    TranslateResponse:
+      type: object
+      properties:
+        chapter_slug:
+          type: string
+        translated_content:
+          type: string
+          description: Urdu-translated content in Markdown
+        cached:
+          type: boolean
+
+    # ── Common ──
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        detail:
+          type: string

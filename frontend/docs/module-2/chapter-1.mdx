@@ -1,0 +1,169 @@
+---
+sidebar_position: 1
+title: "Chapter 1: Gazebo Simulation"
+description: Building robot simulations with Gazebo — worlds, sensors, and physics
+---
+
+# Gazebo Simulation
+
+**Learning Objectives:**
+- Set up Gazebo Harmonic for robot simulation
+- Build custom simulation worlds with SDF
+- Add sensors (camera, LIDAR, IMU) to simulated robots
+- Understand physics engines and simulation fidelity
+
+**Prerequisites:** [Module 1: ROS 2 Foundations](/module-1/chapter-1)
+
+**Estimated Reading Time:** 45 minutes
+
+---
+
+## Why Simulate?
+
+Building and testing robot software on physical hardware is:
+
+- **Expensive**: hardware breaks, components cost money
+- **Slow**: charging, resetting, physical setup time
+- **Dangerous**: a bug in navigation code can damage the robot or its environment
+
+**Simulation** lets you test robot behavior in a safe, fast, and reproducible virtual environment. A simulated robot can crash 1,000 times with zero real-world consequences.
+
+## Gazebo Harmonic
+
+**Gazebo** (formerly Ignition Gazebo) is the standard open-source robot simulator for ROS 2. It provides:
+
+- Accurate physics simulation (DART, Bullet)
+- Sensor simulation (camera, LIDAR, depth, IMU)
+- ROS 2 integration via `ros_gz` bridge
+- Scalable for multi-robot scenarios
+
+### Installation
+
+```bash
+# Install Gazebo Harmonic on Ubuntu 22.04
+sudo apt install ros-humble-ros-gz
+```
+
+### Launching Your First Simulation
+
+```bash
+# Launch an empty world
+gz sim empty.sdf
+
+# Launch with a robot
+gz sim -r shapes.sdf
+```
+
+## Building Worlds with SDF
+
+Worlds are described in **SDF (Simulation Description Format)** — an XML-based format:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="warehouse">
+    <physics type="dart">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <light type="directional" name="sun">
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Ground Plane</uri>
+    </include>
+
+    <model name="box_obstacle">
+      <static>true</static>
+      <pose>2 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1 1 1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1 1 1</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+## Simulating Sensors
+
+### Camera
+
+```xml
+<sensor name="camera" type="camera">
+  <camera>
+    <horizontal_fov>1.047</horizontal_fov>
+    <image>
+      <width>640</width>
+      <height>480</height>
+    </image>
+    <clip>
+      <near>0.1</near>
+      <far>100</far>
+    </clip>
+  </camera>
+  <update_rate>30</update_rate>
+</sensor>
+```
+
+### LIDAR
+
+```xml
+<sensor name="lidar" type="gpu_lidar">
+  <lidar>
+    <scan>
+      <horizontal>
+        <samples>360</samples>
+        <resolution>1</resolution>
+        <min_angle>-3.14159</min_angle>
+        <max_angle>3.14159</max_angle>
+      </horizontal>
+    </scan>
+    <range>
+      <min>0.1</min>
+      <max>10.0</max>
+    </range>
+  </lidar>
+  <update_rate>10</update_rate>
+</sensor>
+```
+
+## ROS 2–Gazebo Bridge
+
+The `ros_gz_bridge` package translates between Gazebo and ROS 2 topics:
+
+```bash
+# Bridge camera images from Gazebo to ROS 2
+ros2 run ros_gz_bridge parameter_bridge \
+    /camera@sensor_msgs/msg/Image@gz.msgs.Image
+
+# Bridge LIDAR scans
+ros2 run ros_gz_bridge parameter_bridge \
+    /lidar@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan
+```
+
+## Exercise: Warehouse Navigation World
+
+Build a Gazebo world that represents a simple warehouse:
+
+1. A ground plane
+2. Four shelf obstacles (static boxes)
+3. A TurtleBot 4 robot with camera and LIDAR
+4. Bridge sensor topics to ROS 2
+
+Then use `ros2 topic echo` to verify sensor data is flowing.
+
+## Summary
+
+- **Gazebo** provides physics-accurate robot simulation with ROS 2 integration
+- Worlds are described in **SDF** format with models, lights, and physics
+- Sensors (camera, LIDAR, IMU) can be attached to simulated robots
+- The **ros_gz_bridge** translates between Gazebo and ROS 2 messages
+
+**Next:** [Chapter 2: Unity Digital Twin](/module-2/chapter-2) — build photorealistic simulations.
