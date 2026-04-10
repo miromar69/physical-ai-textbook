@@ -1,14 +1,15 @@
-"""RAG service: embed query, retrieve from Qdrant, generate response via OpenAI."""
+"""RAG service: embed query, retrieve from Qdrant, generate response via Groq."""
 
-from openai import OpenAI
+from groq import Groq
 
 from app.config import settings
 from app.db.qdrant import qdrant_client
-from app.services.embedding_service import COLLECTION_NAME, EMBEDDING_MODEL
+from app.services.embedding_service import COLLECTION_NAME, embedding_model
 
-openai_client = OpenAI(api_key=settings.openai_api_key)
+groq_client = Groq(api_key=settings.groq_api_key)
 
 TOP_K = 5
+LLM_MODEL = "llama-3.3-70b-versatile"
 
 SYSTEM_PROMPT = """You are a helpful teaching assistant for the Physical AI & Humanoid Robotics textbook.
 Your role is to answer student questions based ONLY on the textbook content provided below.
@@ -26,9 +27,8 @@ Context from the textbook:
 
 
 def embed_query(query: str) -> list[float]:
-    """Embed a single query string."""
-    response = openai_client.embeddings.create(model=EMBEDDING_MODEL, input=[query])
-    return response.data[0].embedding
+    """Embed a single query string using local SentenceTransformers."""
+    return embedding_model.encode([query])[0].tolist()
 
 
 def retrieve_chunks(
@@ -97,9 +97,9 @@ def generate_response(
     if selected_text:
         full_message = f'Regarding this text: "{selected_text}"\n\n{user_message}'
 
-    # Generate response
-    completion = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+    # Generate response via Groq
+    completion = groq_client.chat.completions.create(
+        model=LLM_MODEL,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": full_message},

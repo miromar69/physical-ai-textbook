@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     qdrant_url: str
     qdrant_api_key: str
 
-    # OpenAI
-    openai_api_key: str
+    # Groq
+    groq_api_key: str
 
     # Better Auth
     better_auth_secret: str

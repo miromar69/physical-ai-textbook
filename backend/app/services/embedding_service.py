@@ -1,22 +1,21 @@
-"""Embedding service: parse MDX files, chunk on headings, embed with OpenAI, upload to Qdrant."""
+"""Embedding service: parse MDX files, chunk on headings, embed with Fastembed (local), upload to Qdrant."""
 
 import re
 import uuid
 from pathlib import Path
 
-from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from app.config import settings
 from app.db.qdrant import qdrant_client
 
 COLLECTION_NAME = "chapter_chunks"
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIM = 1536
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+EMBEDDING_DIM = 384
 MAX_CHUNK_TOKENS = 500
 DOCS_DIR = Path(__file__).resolve().parents[3] / "frontend" / "docs"
 
-openai_client = OpenAI(api_key=settings.openai_api_key)
+embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 
 
 def parse_mdx_file(path: Path) -> list[dict]:
@@ -101,9 +100,8 @@ def get_module_number(slug: str) -> int | None:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Generate embeddings for a batch of texts."""
-    response = openai_client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
-    return [item.embedding for item in response.data]
+    """Generate embeddings locally using SentenceTransformers."""
+    return embedding_model.encode(texts).tolist()
 
 
 def index_all_chapters():
@@ -154,7 +152,7 @@ def index_all_chapters():
             points.append(
                 PointStruct(
                     id=chunk["id"],
-                    vector=embedding,
+                    vector=embedding.tolist(),
                     payload={
                         "chapter_slug": chunk["chapter_slug"],
                         "module_number": chunk["module_number"],

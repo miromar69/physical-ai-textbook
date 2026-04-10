@@ -40,7 +40,7 @@ jobs:
           DATABASE_URL: sqlite+aiosqlite:///./test.db
           QDRANT_URL: http://localhost:6333
           QDRANT_API_KEY: test
-          OPENAI_API_KEY: test
+          GROQ_API_KEY: test
           BETTER_AUTH_SECRET: test-secret
 
   docker:

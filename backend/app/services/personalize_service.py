@@ -3,7 +3,7 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-from openai import OpenAI
+from groq import Groq
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,9 +11,10 @@ from app.config import settings
 from app.models.cache import PersonalizationCache
 from app.models.user import BackgroundProfile
 
-openai_client = OpenAI(api_key=settings.openai_api_key)
+groq_client = Groq(api_key=settings.groq_api_key)
 
 CACHE_TTL_DAYS = 7
+LLM_MODEL = "llama-3.3-70b-versatile"
 
 SYSTEM_PROMPT = """You are an expert robotics educator adapting textbook content for a specific student.
 
@@ -102,8 +103,8 @@ async def personalize_content(
         has_sensors=profile.has_sensors,
     )
 
-    completion = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+    completion = groq_client.chat.completions.create(
+        model=LLM_MODEL,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": f"Adapt this chapter content:\n\n{content}"},
