@@ -40,9 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const data = await api.get<User>("/auth/me");
-      setUser(data);
+      const response = await fetch(`${api.baseUrl}/auth/me`, {
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
+        setUser(null);
+      }
     } catch {
+      // Backend unavailable — silently treat as not authenticated
       setUser(null);
     } finally {
       setLoading(false);

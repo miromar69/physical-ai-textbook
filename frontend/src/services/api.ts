@@ -9,7 +9,7 @@ interface ApiError {
 }
 
 class ApiClient {
-  private baseUrl: string;
+  readonly baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
