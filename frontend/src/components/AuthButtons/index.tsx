@@ -1,7 +1,8 @@
 import React from "react";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 import { useAuth } from "../../contexts/AuthContext";
 
-export default function AuthButtons(): React.ReactElement {
+function AuthButtonsInner(): React.ReactElement {
   const { user, loading, logout } = useAuth();
 
   if (loading) {
@@ -32,5 +33,13 @@ export default function AuthButtons(): React.ReactElement {
         Sign Up
       </a>
     </div>
+  );
+}
+
+export default function AuthButtons(): React.ReactElement {
+  return (
+    <BrowserOnly fallback={<div className="navbar__item" />}>
+      {() => <AuthButtonsInner />}
+    </BrowserOnly>
   );
 }
