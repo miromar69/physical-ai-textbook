@@ -152,7 +152,7 @@ def index_all_chapters():
             points.append(
                 PointStruct(
                     id=chunk["id"],
-                    vector=embedding.tolist(),
+                    vector=embedding,
                     payload={
                         "chapter_slug": chunk["chapter_slug"],
                         "module_number": chunk["module_number"],

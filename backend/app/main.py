@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -12,7 +13,7 @@ async def lifespan(app: FastAPI):
     from app.db.database import engine
 
     async with engine.begin() as conn:
-        await conn.execute(conn.default_isolation_level)  # noqa: connection test
+        await conn.execute(text("SELECT 1"))  # connection test
     yield
     await engine.dispose()
 
