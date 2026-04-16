@@ -5,11 +5,11 @@ An interactive online textbook for Physical AI and Humanoid Robotics, featuring 
 ## Features
 
 - **Interactive Textbook** — 4 modules, 9 chapters covering ROS 2, Gazebo/Unity simulation, NVIDIA Isaac Sim, and Vision-Language-Action models. Built with Docusaurus 3 and MDX.
-- **AI Teaching Assistant** — RAG chatbot powered by OpenAI + Qdrant vector search. Ask questions about any chapter, or select text and ask contextually.
+- **AI Teaching Assistant** — RAG chatbot powered by Groq (Llama 3.3 70B) + SentenceTransformers (local embeddings) + Qdrant vector search. Ask questions about any chapter, or select text and ask contextually.
 - **User Authentication** — Sign up with email/password and complete a background questionnaire (Python, ROS 2, ML/AI, simulation skill levels + hardware access).
-- **Content Personalization** — Click "Personalize" on any chapter to get content adapted to your skill level. Cached per profile hash to reduce API costs.
+- **Content Personalization** — Click "Personalize" on any chapter to get content adapted to your skill level via LLM. Cached per profile hash.
 - **Urdu Translation** — Click "Translate to Urdu" on any chapter. Prose translates to Urdu with RTL layout; code blocks stay in English. Cached per content hash.
-- **GitHub Pages Deployment** — Static frontend deploys to GitHub Pages. Backend runs as a Docker container.
+- **Cloud Deployment** — Frontend on Vercel, backend on Hugging Face Spaces (Docker).
 
 ## Tech Stack
 
@@ -19,9 +19,9 @@ An interactive online textbook for Physical AI and Humanoid Robotics, featuring 
 | Backend | FastAPI, Python 3.11+, SQLAlchemy (async) |
 | Database | Neon Serverless Postgres |
 | Vector Store | Qdrant Cloud |
-| AI/LLM | OpenAI GPT-4o-mini, text-embedding-3-small |
+| AI/LLM | Groq (Llama 3.3 70B), SentenceTransformers (all-MiniLM-L6-v2) |
 | Auth | JWT session cookies (bcrypt + PyJWT) |
-| CI/CD | GitHub Actions, Docker |
+| Deployment | Vercel (frontend), Hugging Face Spaces (backend Docker) |
 
 ## Project Structure
 
@@ -47,7 +47,7 @@ specs/                     # Feature spec, architecture plan, tasks, data model,
 - Python 3.11+
 - A [Neon](https://neon.tech) Postgres database (free tier works)
 - A [Qdrant Cloud](https://cloud.qdrant.io) cluster (free tier works)
-- An [OpenAI](https://platform.openai.com) API key
+- A [Groq](https://console.groq.com) API key (free tier available)
 
 ### Frontend
 
