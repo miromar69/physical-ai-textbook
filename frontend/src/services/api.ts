@@ -1,7 +1,7 @@
 const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? (process.env.REACT_APP_API_URL ?? "https://miromar69-physical-ai-textbook-api.hf.space")
-    : "http://localhost:8000";
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:8000"
+    : "https://miromar69-physical-ai-textbook-api.hf.space";
 
 interface ApiError {
   error: string;
