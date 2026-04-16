@@ -24,7 +24,6 @@ export default function PersonalizeButton({
     if (!contentEl) return;
 
     if (personalized && originalContent) {
-      // Restore original
       contentEl.innerHTML = originalContent;
       setPersonalized(false);
       return;
@@ -32,7 +31,6 @@ export default function PersonalizeButton({
 
     setLoading(true);
     try {
-      // Save original content
       setOriginalContent(contentEl.innerHTML);
 
       const response = await api.post<{
@@ -43,12 +41,11 @@ export default function PersonalizeButton({
         content: contentEl.innerText,
       });
 
-      // Replace content with personalized version
-      // Convert markdown-like response to simple HTML paragraphs
       const html = response.personalized_content
         .split("\n\n")
         .map((block) => {
-          if (block.startsWith("```")) return `<pre><code>${block.replace(/```\w*\n?/g, "")}</code></pre>`;
+          if (block.startsWith("```"))
+            return `<pre><code>${block.replace(/```\w*\n?/g, "")}</code></pre>`;
           if (block.startsWith("# ")) return `<h1>${block.slice(2)}</h1>`;
           if (block.startsWith("## ")) return `<h2>${block.slice(3)}</h2>`;
           if (block.startsWith("### ")) return `<h3>${block.slice(4)}</h3>`;
@@ -59,7 +56,6 @@ export default function PersonalizeButton({
       contentEl.innerHTML = html;
       setPersonalized(true);
     } catch {
-      // Restore on error
       if (originalContent) {
         contentEl.innerHTML = originalContent;
       }
@@ -71,7 +67,7 @@ export default function PersonalizeButton({
   if (!user) {
     return (
       <div className={styles.wrapper}>
-        <a href="/signin" className={`button button--secondary button--sm ${styles.button}`}>
+        <a href="/signin" className={styles.signInLink}>
           Sign in to personalize
         </a>
       </div>
@@ -81,7 +77,7 @@ export default function PersonalizeButton({
   return (
     <div className={styles.wrapper}>
       <button
-        className={`button button--sm ${personalized ? "button--warning" : "button--primary"} ${styles.button}`}
+        className={`${styles.button} ${personalized ? styles.active : ""}`}
         onClick={handlePersonalize}
         disabled={loading}
         type="button"
@@ -90,7 +86,7 @@ export default function PersonalizeButton({
           ? "Personalizing..."
           : personalized
             ? "Show Original"
-            : "Personalize"}
+            : "\u2728 Personalize"}
       </button>
     </div>
   );

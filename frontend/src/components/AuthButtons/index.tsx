@@ -11,12 +11,29 @@ function AuthButtonsInner(): React.ReactElement {
 
   if (user) {
     return (
-      <div className="navbar__item" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <span style={{ fontWeight: 500 }}>{user.display_name}</span>
+      <div
+        className="navbar__item"
+        style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+      >
+        <span
+          style={{
+            fontFamily: "'Outfit', sans-serif",
+            fontWeight: 600,
+            fontSize: "0.85rem",
+            color: "var(--ifm-color-primary)",
+            background: "var(--color-glow)",
+            padding: "0.3rem 0.75rem",
+            borderRadius: "0.5rem",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {user.display_name}
+        </span>
         <button
           className="button button--secondary button--sm"
           onClick={() => logout()}
           type="button"
+          style={{ fontSize: "0.8rem" }}
         >
           Sign Out
         </button>
@@ -25,11 +42,22 @@ function AuthButtonsInner(): React.ReactElement {
   }
 
   return (
-    <div className="navbar__item" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-      <a href="/signin" className="button button--secondary button--sm">
+    <div
+      className="navbar__item"
+      style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+    >
+      <a
+        href="/signin"
+        className="button button--secondary button--sm"
+        style={{ fontSize: "0.8rem" }}
+      >
         Sign In
       </a>
-      <a href="/signup" className="button button--primary button--sm">
+      <a
+        href="/signup"
+        className="button button--primary button--sm"
+        style={{ fontSize: "0.8rem" }}
+      >
         Sign Up
       </a>
     </div>

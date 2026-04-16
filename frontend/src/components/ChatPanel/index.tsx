@@ -38,7 +38,6 @@ export default function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // When selected text changes, open panel and pre-fill
   useEffect(() => {
     if (selectedText) {
       setIsOpen(true);
@@ -108,19 +107,29 @@ export default function ChatPanel({
         aria-label={isOpen ? "Close chat" : "Open chat"}
         type="button"
       >
-        {isOpen ? "\u2715" : "\uD83D\uDCAC"}
+        {isOpen ? "\u2715" : "\uD83E\uDD16"}
       </button>
 
       {isOpen && (
-        <div className={styles.panel} role="complementary" aria-label="AI Teaching Assistant chat panel">
+        <div className={styles.panel} role="complementary" aria-label="AI Teaching Assistant">
           <div className={styles.header}>
-            <h3 id="chat-panel-title">AI Teaching Assistant</h3>
+            <div className={styles.headerIcon}>
+              {"\uD83E\uDD16"}
+            </div>
+            <div className={styles.headerText}>
+              <h3 id="chat-panel-title">AI Teaching Assistant</h3>
+              <p>Powered by RAG</p>
+            </div>
           </div>
 
           <div className={styles.messages} role="log" aria-live="polite" aria-labelledby="chat-panel-title">
             {messages.length === 0 && (
               <div className={styles.emptyState}>
-                Ask me anything about this chapter!
+                <span className={styles.emptyIcon}>{"\uD83D\uDCDA"}</span>
+                <span className={styles.emptyTitle}>Ask about this chapter</span>
+                <span className={styles.emptyHint}>
+                  I can explain concepts, compare topics, or help you understand code examples.
+                </span>
               </div>
             )}
             {messages.map((msg, i) => (
@@ -140,7 +149,13 @@ export default function ChatPanel({
             ))}
             {loading && (
               <div className={`${styles.message} ${styles.assistant}`}>
-                <div className={styles.messageContent}>Thinking...</div>
+                <div className={styles.messageContent}>
+                  <div className={styles.loadingDots}>
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
               </div>
             )}
             <div ref={messagesEndRef} />

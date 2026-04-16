@@ -22,7 +22,6 @@ export default function TranslateButton({
     if (!contentEl) return;
 
     if (translated && originalContent) {
-      // Restore original
       contentEl.innerHTML = originalContent;
       contentEl.classList.remove("urdu-content");
       contentEl.removeAttribute("dir");
@@ -42,7 +41,6 @@ export default function TranslateButton({
         content: contentEl.innerText,
       });
 
-      // Convert translated markdown to simple HTML
       const html = response.translated_content
         .split("\n\n")
         .map((block) => {
@@ -72,16 +70,12 @@ export default function TranslateButton({
   return (
     <div className={styles.wrapper}>
       <button
-        className={`button button--sm ${translated ? "button--warning" : "button--secondary"} ${styles.button}`}
+        className={`${styles.button} ${translated ? styles.active : ""}`}
         onClick={handleTranslate}
         disabled={loading}
         type="button"
       >
-        {loading
-          ? "Translating..."
-          : translated
-            ? "Show Original"
-            : "Translate to Urdu"}
+        {loading ? "Translating..." : translated ? "Show Original" : "\uD83C\uDF10 Translate to Urdu"}
       </button>
     </div>
   );
