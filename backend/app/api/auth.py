@@ -28,9 +28,9 @@ async def signup_route(
         key=SESSION_COOKIE,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
         max_age=TOKEN_EXPIRY_HOURS * 3600,
-        secure=False,  # Set True in production with HTTPS
+        secure=True,
     )
     return AuthResponse(
         user=UserResponse.model_validate(user),
@@ -50,9 +50,9 @@ async def signin_route(
         key=SESSION_COOKIE,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
         max_age=TOKEN_EXPIRY_HOURS * 3600,
-        secure=False,
+        secure=True,
     )
     return AuthResponse(
         user=UserResponse.model_validate(user),
