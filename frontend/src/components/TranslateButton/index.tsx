@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { marked } from "marked";
 import { api } from "../../services/api";
 import styles from "./styles.module.css";
 
@@ -41,19 +42,7 @@ export default function TranslateButton({
         content: contentEl.innerText,
       });
 
-      const html = response.translated_content
-        .split("\n\n")
-        .map((block) => {
-          if (block.startsWith("```")) {
-            return `<pre class="code-block-ltr"><code>${block.replace(/```\w*\n?/g, "")}</code></pre>`;
-          }
-          if (block.startsWith("# ")) return `<h1>${block.slice(2)}</h1>`;
-          if (block.startsWith("## ")) return `<h2>${block.slice(3)}</h2>`;
-          if (block.startsWith("### ")) return `<h3>${block.slice(4)}</h3>`;
-          return `<p>${block}</p>`;
-        })
-        .join("\n");
-
+      const html = await marked.parse(response.translated_content);
       contentEl.innerHTML = html;
       contentEl.classList.add("urdu-content");
       contentEl.setAttribute("dir", "rtl");

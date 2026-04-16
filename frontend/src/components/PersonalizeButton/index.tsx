@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { marked } from "marked";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 import styles from "./styles.module.css";
@@ -41,18 +42,7 @@ export default function PersonalizeButton({
         content: contentEl.innerText,
       });
 
-      const html = response.personalized_content
-        .split("\n\n")
-        .map((block) => {
-          if (block.startsWith("```"))
-            return `<pre><code>${block.replace(/```\w*\n?/g, "")}</code></pre>`;
-          if (block.startsWith("# ")) return `<h1>${block.slice(2)}</h1>`;
-          if (block.startsWith("## ")) return `<h2>${block.slice(3)}</h2>`;
-          if (block.startsWith("### ")) return `<h3>${block.slice(4)}</h3>`;
-          return `<p>${block}</p>`;
-        })
-        .join("\n");
-
+      const html = await marked.parse(response.personalized_content);
       contentEl.innerHTML = html;
       setPersonalized(true);
     } catch {
